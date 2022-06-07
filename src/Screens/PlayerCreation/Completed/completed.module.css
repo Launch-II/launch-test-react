@@ -1,0 +1,15 @@
+.missileImage {
+  width: 280px;
+  height: 280px;
+  object-fit: contain;
+}
+.sendingToServer {
+  flex-grow: 1;
+  flex-basis: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 100px;
+  flex-direction: column;
+  gap: 20px;
+}

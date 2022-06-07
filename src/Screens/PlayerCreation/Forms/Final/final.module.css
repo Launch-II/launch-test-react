@@ -1,0 +1,44 @@
+.tosBtn {
+  cursor: pointer;
+  color: var(--css-brand-color);
+}
+.tosBtn:hover {
+  text-decoration: underline;
+}
+.mainFormContainer {
+  display: flex;
+  justify-content: flex-start;
+  /* align-items: center; */
+  flex-direction: column;
+  height: 100%;
+  flex-grow: 1;
+  flex-basis: 0;
+}
+.mainFormContainer form {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-basis: 0;
+}
+
+.veterancyStatus {
+  margin-top: calc(var(--ui-padding-std) * 2);
+}
+.timePlayed {
+  margin-top: var(--ui-padding-std);
+}
+.serversPlayed {
+  margin-top: var(--ui-padding-std);
+}
+.veteranContainer {
+  transition: filter 80ms ease-in-out;
+}
+.veteranContainer[data-veterancy-status='false'] {
+  pointer-events: none;
+  filter: saturate(0.3) brightness(0.4);
+  cursor: not-allowed;
+}
+.hearAboutUs {
+  margin-top: var(--ui-padding-std);
+}

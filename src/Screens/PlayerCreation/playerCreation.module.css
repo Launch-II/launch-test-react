@@ -1,0 +1,38 @@
+.playerCreationMain {
+  width: 100%;
+  max-width: min(var(--sc-content-sm), calc(100vw - var(--mobile-margin)));
+  margin: 0 auto;
+  height: 100vh;
+  display: flex;
+  padding: calc(var(--mobile-margin) / 2) 0px;
+  justify-content: flex-start;
+  align-items: center;
+  flex-direction: column;
+}
+.playerCreationBoxCont {
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: var(--ui-padding-std);
+  gap: 20px;
+  height: 100%;
+}
+.playerCreationBoxCont > *:is(h3, p) {
+  margin: 0px auto;
+  text-align: center;
+}
+.authText {
+  margin-top: var(--ui-padding-std);
+}
+
+.playerCreationBoxCont > div {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-basis: 0;
+}
+.playerCreationBoxCont > div > div:last-child {
+  flex-grow: 1;
+  flex-basis: 0;
+  display: flex;
+  flex-direction: column;
+}

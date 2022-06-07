@@ -1,0 +1,23 @@
+.authenticationMain {
+  width: 100%;
+  max-width: min(var(--sc-content-sm), calc(100vw - var(--mobile-margin)));
+  margin: 0 auto;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.authenticationBoxCont {
+  justify-content: center;
+  align-items: stretch;
+  padding: var(--ui-padding-std);
+  gap: 20px;
+}
+.authenticationBoxCont > *:is(h3, p) {
+  margin: 0px auto;
+  text-align: center;
+}
+.authText {
+  margin-top: var(--ui-padding-std);
+}

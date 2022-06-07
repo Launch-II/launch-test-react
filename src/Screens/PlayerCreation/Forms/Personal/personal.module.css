@@ -1,0 +1,23 @@
+.tosBtn {
+  cursor: pointer;
+  color: var(--css-brand-color);
+}
+.tosBtn:hover {
+  text-decoration: underline;
+}
+.mainFormContainer {
+  display: flex;
+  justify-content: flex-start;
+  /* align-items: center; */
+  flex-direction: column;
+  height: 100%;
+  flex-grow: 1;
+  flex-basis: 0;
+}
+.mainFormContainer form {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-basis: 0;
+}

@@ -1,0 +1,19 @@
+.loadingMain {
+  width: 100%;
+  max-width: min(var(--sc-content-sm), calc(100vw - var(--mobile-margin)));
+  margin: 0 auto;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.loadingBoxCont {
+  justify-content: center;
+  align-items: stretch;
+  padding: var(--ui-padding-std);
+  gap: 20px;
+}
+.loadingBoxCont > *:is(h2, p) {
+  margin: 0px auto;
+}

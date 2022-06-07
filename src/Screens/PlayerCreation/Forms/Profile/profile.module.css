@@ -1,0 +1,33 @@
+.tosBtn {
+  cursor: pointer;
+  color: var(--css-brand-color);
+}
+.tosBtn:hover {
+  text-decoration: underline;
+}
+.mainFormContainer {
+  display: flex;
+  justify-content: flex-start;
+  /* align-items: center; */
+  flex-direction: column;
+  height: 100%;
+  flex-grow: 1;
+  flex-basis: 0;
+}
+.mainFormContainer form {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-basis: 0;
+}
+.userUpload {
+  cursor: pointer;
+  transition: filter 80ms ease-in-out;
+}
+.userUpload:hover {
+  filter: saturate(0.4);
+}
+.userUpload[data-avatar-filled='true'] {
+  background-color: #f3f3f3;
+}
