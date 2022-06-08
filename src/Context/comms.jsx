@@ -19,143 +19,115 @@ import handlers from '../functions/handlers';
 const Comms = forwardRef(
   ({ callSiblingFunction, tickRate, tempConfig, siblingFunctions }, ref) => {
     const [sendQueue, sendQueueHandler] = useListState([]);
-    const [sessionAlive, setSessionAlive] = useState(false);
     const {
-      toSmobject,
       authenticated,
       setAuthenticated,
       setUser,
       setPlayer,
       setSuperSessionAlive,
+      session,
+      setSession,
     } = useContext(Context);
 
-    const [session, setSession] = useState(null);
+    // []=================[]
+    // [] MAIN USE EFFECT []
+    // []=================[]
+    // NOTE: I want to try to avoid this, as all logic should be initialized externally.
 
-    var socket;
-    var keepaliveCount = 0;
+    // []========================[]
+    // [] STATE CHANGE LISTENERS []
+    // []========================[]
+    // NOTE: I may want to avoid these. Not sure.
+    // When session is open, start handling incoming packets.
 
-    useEffect(() => {
-      if (sessionAlive == true) {
-        // console.log('sessionAlive:', sessionAlive);
-        startListener();
-      }
-    }, [sessionAlive]);
-    const startListener = () => {
-      // This is where the comms listen for incoming data.
-      session.on('data', async (data) => {
-        console.log('{}====DATA===={}');
-        console.table(data);
-        if (handlers[data.name]) {
-          handlers[data.name]({ siblingFunctions, data });
-        } else {
+    // useEffect(() => {
+    //   if (session) startListener();
+    // }, [session]);
+
+    const initializeConnection = async () => {
+      let connectionEstablished = await new Promise(async (resolve, reject) => {
+        if (session) {
           console.log(
-            `Received data type: ${data.name} for which there is no handler.`
+            '🐒 Some monkey is trying to start a new server connection even though it already exists.'
           );
+          resolve(false);
+          return;
         }
+        console.log('Initializing connection...');
+        let socket = openSocket(`http://${tempConfig.host}:${tempConfig.port}`);
+        socket.on('connect', (res) => {
+          setSession(socket);
+          console.log('...Connection established');
+          resolve(true);
+        });
       });
+      return connectionEstablished;
     };
 
-    const testingOne = () => {
-      console.log('Sending test data', session);
+    const initializeListener = async () => {
+      if (session) {
+        session.on('data', async (data) => {
+          console.table(data);
+          if (handlers[data.name]) {
+            handlers[data.name]({ siblingFunctions, data });
+          } else {
+            console.log(
+              `Received data type: ${data.name} for which there is no handler.`
+            );
+          }
+        });
+        return 'Listening';
+      } else {
+        return 'No session';
+      }
+      // This is where the comms listens for incoming data.
+      console.log('Now listening for incoming data...');
+    };
+
+    const sendMessage = ({ type, name, data }) => {
+      if (!session?.emit) return;
       session.emit(
         'data',
         toSmobject({
-          type: 'command',
-          name: 'TestCommand',
-          data: {
-            keyOne: 'Bolshevik',
-          },
+          type,
+          name,
+          data,
         })
       );
     };
 
-    const sendMessage = ({ type, name, data }) => {
-      if (!session?.emit) {
-        console.log('boob', { type, name, data });
-      } else {
-        session.emit(
-          'data',
-          toSmobject({
-            type,
-            name,
-            data,
-          })
-        );
-      }
-    };
+    // Command - Has only name and type.
+    // Object - Has name, type, and data.
+    // Request - Has name, type, may include data, and awaits a response from the server.
+    // Other - List may be expanded as more robust data is required for features - like notification, direct message, etc.
 
-    const commsTick = () => {
-      // This sends messages from the message queue every second. Simple as.
-      if (sendQueue.length) {
-        // This runs every second once the connection is open. It will iterate over messagesSendList and send as many messages as it can before the tick is over with.
-        var messagesSent = 0;
-        var timeElapsed = 0;
-
-        while (timeElapsed < 999 && sendQueue.length) {
-          let startTime = performance.now();
-
-          try {
-            // Will likely need to dispatch these asynchronously in the future.
-            session.emit('data', sendQueue[0]);
-            messagesSent++;
-          } catch (e) {
-            console.log(e);
-          }
-          sendQueueHandler.shift();
-          let endTime = performance.now();
-          timeElapsed = timeElapsed + (endTime - startTime);
-        }
-        if (!messagesSent) {
-          if (keepaliveCount == 30) {
-            // Send keepalive;
-            console.log('Sending keepAlive');
-            smokeSignal.sendCommand({ lCommand: byName('KeepAlive').code });
-            keepaliveCount = 0;
-            return;
-          }
-          keepaliveCount++;
-          return;
-        }
-        if (messagesSent) {
-          console.log(`Finished with ${messagesSent} transmission(s).`);
-          return;
-        }
-      }
-    };
-
-    const enableConnectionAttempt = () => {
-      if (sessionAlive == true) {
-        console.log(
-          '🐒 Some monkey is trying to start a new server connection even though it already exists.'
-        );
-        return;
-      }
-      console.log('Initializing connection...');
-      socket = openSocket(`http://${tempConfig.host}:${tempConfig.port}`);
-      socket.on('connect', (res) => {
-        setSession(socket);
-        setSessionAlive(true);
-        setSuperSessionAlive(true);
-        console.log('...Connection established');
-      });
-    };
-
-    const tick = () => {
-      //   console.log('Comms tick running...');
-      commsTick();
+    const toSmobject = ({
+      data = 'nodata',
+      type = 'notype',
+      name = 'noid',
+    }) => {
+      // Not particularly useful now, but will be used to construct data eventually.
+      return {
+        name,
+        type,
+        data,
+      };
     };
 
     useImperativeHandle(ref, () => ({
       // This will allow the Game Simulation to call functions within this scope.
-      callFunction(f, a) {
-        // console.log('called');
-        if (!f == 'tick') {
-          console.log({ f, a });
+      callFunction: async (f, a) => {
+        if (a) {
+          let result = await eval(`${f}(${JSON.stringify(a)})`);
+          return result;
+        } else {
+          let result = await eval(`${f}()`);
+          return result;
         }
-        a ? eval(`${f}(${JSON.stringify(a)})`) : eval(`${f}()`);
       },
     }));
 
+    // Returns nothing. Get over it.
     return null;
   }
 );

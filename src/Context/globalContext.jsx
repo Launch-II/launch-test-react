@@ -14,7 +14,8 @@ import ByteBuffer from 'ByteBuffer';
 import { useListState } from '@mantine/hooks';
 import GameSimulation from './gameSimulation';
 import Comms from './comms';
-
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import preload, { preloadFunctions } from '../functions/preload';
 const tickRate = 1000;
 
 const tempConfig = {
@@ -25,14 +26,19 @@ const tempConfig = {
 const authenticated = true;
 
 export const LogicContext = ({ children }) => {
+  // Router hooks
+
+  let navigate = useNavigate();
+  let location = useLocation();
+
   // []==============[]
   // [] GLOBAL STATE []
   // []==============[]
-  const [preLoadState, setPreLoadState] = useState('Initializing');
-  const [preLoadMessage, setPreLoadMessage] = useState(
-    'Initializing services...'
-  );
+  const [preLoadState, setPreLoadState] = useState('');
+  const [preLoadMessage, setPreLoadMessage] = useState('');
   const [preLoadPercentage, setPreLoadPercentage] = useState(0);
+
+  const [preLoadComplete, setPreLoadComplete] = useState(false);
 
   const [cachedConfig, setCachedConfig] = useState(null);
   const [cachedCredentials, setCachedCredentials] = useState(null);
@@ -40,19 +46,23 @@ export const LogicContext = ({ children }) => {
 
   // oAuth Authentication States
   const [authenticated, setAuthenticated] = useState(null);
-  const [authenticating, setAuthenticating] = useState(false);
   const [config, setConfig] = useState(null);
   const [user, setUser] = useState(null);
 
   // Player Creation States
   const [player, setPlayer] = useState(null);
-  const [playerCreationState, setPlayerCreationState] =
-    useState('Warming up...');
 
-  const [superSessionAlive, setSuperSessionAlive] = useState(false);
+  // []=============[]
+  // [] COMMS STATE []
+  // []=============[]
+
+  // The server session state.
+  const [session, setSession] = useState(null);
+
   // []============[]
   // [] GAME STATE []
   // []============[]
+  // All of the entities in the game. I may dynamically generate these in the future.
   const [alliances, alliancesHandler] = useListState([]);
   const [treaties, treatiesHandler] = useListState([]);
   const [players, playersHandler] = useListState([]);
@@ -65,29 +75,56 @@ export const LogicContext = ({ children }) => {
   const [loots, lootsHandler] = useListState([]);
   const [radiations, radiationsHandler] = useListState([]);
 
+  // This allows the game and the client session to communicate laterally.
+  // This is a fundamental violation of React data flow, but I do not know how to do it otherwise.
   const gameRef = useRef();
   const commsRef = useRef();
 
-  const callCommsFunction = (functionName, parameters) => {
+  const callCommsFunction = async (functionName, parameters) => {
     if (parameters) {
       console.log(`Calling comms function ${functionName} with parameters:`);
-      console.table(parameters);
+      console.table({ parameters });
     } else {
       console.log(`Calling comms function ${functionName}.`);
     }
-    commsRef.current.callFunction(functionName, parameters);
+
+    let result = await commsRef.current.callFunction(functionName, parameters);
+    return result;
   };
+
   const callGameFunction = (functionName, parameters) => {
     gameRef.current.callFunction(functionName, parameters);
   };
 
-  const startGameServices = () => {
-    callCommsFunction(`enableConnectionAttempt`);
-    let serviceLoop = setInterval(() => {
-      callCommsFunction(`tick`);
-      callGameFunction(`tick`);
-    }, tickRate);
+  // This is a collection of functions to retrieve stuff from local storage.
+  // This is organized such that I don't have to pass a million functions.
+  // I would put this in its own file, but it is easier to do it here so they may access global state.
+
+  const storageFunctions = {
+    credentials: {
+      get: async () => {
+        return localStorage.getItem('credentials');
+      },
+      clear: async () => {
+        localStorage.clear('credentials');
+        return;
+      },
+      set: async (data) => {
+        localStorage.setItem('credentials', data);
+        return;
+      },
+    },
+    config: {
+      get: async () => {},
+      clear: async () => {},
+      set: async (data) => {},
+      checksum: async () => {},
+    },
   };
+
+  // This is a collection of functions which will be activated on ui events.
+  // This is organized such that I don't have to pass a million functions.
+  // I would put this in its own file, but it is easier to do it here so they may access global state.
 
   const uiEventHandlers = {
     testEvent() {
@@ -104,58 +141,56 @@ export const LogicContext = ({ children }) => {
         },
       });
     },
-    playerCreation(data) {
-      setPlayerCreationState('Sending to server...');
-      // Don't worry about it. It's fine.
-      setPlayerCreationState('Awaiting response...');
-      callCommsFunction('sendMessage', {
-        type: 'entity',
-        name: 'CreatePlayer',
-        data,
-      });
-    },
   };
+
+  // const startGameServices = () => {
+  //   callCommsFunction(`enableConnectionAttempt`);
+  //   let serviceLoop = setInterval(() => {
+  //     callCommsFunction(`tick`);
+  //     callGameFunction(`tick`);
+  //   }, tickRate);
+  // };
 
   // useEffect(() => {
-  //   preLoad();
-  // }, []);
+  //   // If the temporary credentials are valid, cache them.
+  //   if (tempCredentials) {
+  //     localStorage.setItem('credentials', JSON.stringify(tempCredentials));
+  //   }
+  //   // We need to check and see if the user has an associated player. If not, they'll need to make one.
+  //   if (user) console.log(user);
+  // }, [user]);
 
-  // Types = config, authentication, command, object, request, message, notification
-  const toSmobject = ({ data = 'nodata', type = 'notype', name = 'noid' }) => {
-    // Not particularly useful now, but will be used to construct data eventually.
-    return {
-      name,
-      type,
-      data,
-    };
-  };
-
-  // I should be banned from the internet for coding such a thing.
+  // []=================[]
+  // [] MAIN USE EFFECT []
+  // []=================[]
 
   useEffect(() => {
-    if (preLoadState == 'Complete') {
-      startGameServices();
-      // console.log(JSON.parse(localStorage.getItem('credentials')).id);
-    }
-  }, [preLoadState]);
+    // Pre-loads everything.
+    // The router should stay stuck in /preload until preload is finalized.
+
+    preload({
+      setPreLoadState,
+      setPreLoadMessage,
+      setPreLoadPercentage,
+      callCommsFunction,
+    });
+  }, []);
+
+  // []========================[]
+  // [] STATE CHANGE LISTENERS []
+  // []========================[]
+  // NOTE: I am going to try to avoid these in the global context.
+  // At all costs. ONLY USE FOR DEBUGGING!
 
   useEffect(() => {
-    console.log({ superSessionAlive });
-  }, [superSessionAlive]);
+    if (session) console.log(session);
+  }, [session]);
 
-  useEffect(() => {
-    console.log({ player });
-  }, [player]);
+  // []=============[]
+  // [] MAIN RENDER []
+  // []=============[]
 
-  useEffect(() => {
-    // If the temporary credentials are valid, cache them.
-    if (tempCredentials) {
-      localStorage.setItem('credentials', JSON.stringify(tempCredentials));
-    }
-    // We need to check and see if the user has an associated player. If not, they'll need to make one.
-    if (user) console.log(user);
-  }, [user]);
-
+  // These will eventually need to be ordered, organized, and pruned for like... any readability.
   return (
     <Context.Provider
       value={{
@@ -164,13 +199,10 @@ export const LogicContext = ({ children }) => {
         config,
         user,
         uiEventHandlers,
-        toSmobject,
         preLoadMessage,
         preLoadPercentage,
         preLoadState,
         cachedConfig,
-        superSessionAlive,
-        setSuperSessionAlive,
         cachedCredentials,
         setUser,
         player,
@@ -180,7 +212,10 @@ export const LogicContext = ({ children }) => {
         setPreLoadState,
         setPreLoadMessage,
         setPreLoadPercentage,
-        playerCreationState,
+        session,
+        setSession,
+        storageFunctions,
+        preloadStages: preloadFunctions.functions.length + 2,
       }}>
       <>
         <GameSimulation
@@ -202,6 +237,10 @@ export const LogicContext = ({ children }) => {
             callGameFunction,
           }}
         />
+        {/* Naughty routers get sent to the /preload */}
+        {!preLoadComplete && location.pathname !== '/preload' ? (
+          <Navigate to='/preload' />
+        ) : null}
         {children}
       </>
     </Context.Provider>

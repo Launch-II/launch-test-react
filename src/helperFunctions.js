@@ -96,6 +96,17 @@ const convertBase64 = (file) => {
   });
 };
 
+const waitFor = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+
+const sequentialArray = (array, curIdx = 0) =>
+  new Promise((resolve) => {
+    const run = async (i) => {
+      await array[i];
+      i == array.length - 1 ? resolve() : run(i++);
+    };
+
+    run(curIdx);
+  });
 /**
  * Useful for rounding single-precision floats (such as those encoded in a Java application)
  * @param {number} float
@@ -606,6 +617,8 @@ module.exports.helperFunctions = {
   removeMarkdownTags,
   camelCase,
   convertBase64,
+  waitFor,
+  sequentialArray,
 };
 
 module.exports.launchFunctions = {
